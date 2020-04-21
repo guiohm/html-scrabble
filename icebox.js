@@ -15,7 +15,7 @@ function thaw(object, prototypeMap) {
                 if (objectsThawed[object._ref]) {
                     return objectsThawed[object._ref];
                 } else {
-                    throw "invalid reference to id " + _object._ref;
+                    throw "invalid reference to id " + object._ref;
                 }
             } else {
                 var thawed;
@@ -70,7 +70,7 @@ function freeze(object) {
 	    if (!object.constructor) {
 		console.log('freeze strange object', object);
 		return object;
-	    } else if (object._frozen) {
+	    } else if (object._frozen && typeof object.length == 'undefined') {
                 return { _ref: object._frozen._id };
             } else {
                 var frozen = freezeObject(object);
