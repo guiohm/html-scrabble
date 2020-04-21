@@ -39,6 +39,8 @@ function UI(game) {
         ui.swapRack.tileCount = 0;
         ui.board = gameData.board;
         ui.board.tileCount = 0;
+        ui.variant = gameData.variant;
+        ui.turnCount = gameData.turns.length;
         ui.legalLetters = gameData.legalLetters;
         ui.players = gameData.players;
         ui.keyboardPlacements = [];
@@ -63,7 +65,7 @@ function UI(game) {
                               }
                               playerNumber++;
                               return TR({ 'class': 'player' + (playerNumber - 1) }, /* ieh */
-                                        TD({ 'class': 'name' }, player.rack ? "You" : player.name),
+                                        TD({ 'class': 'name' }, player.rack ? "Toi" : player.name),
                                         TD({ 'class': 'remainingTiles' }, ''),
                                         TD({ 'class': 'status offline' }, '\u25cf'),
                                         player.scoreElement = TD({ 'class': 'score' }, player.score));
@@ -82,6 +84,7 @@ function UI(game) {
 
         function appendTurnToLog(turn, suppressScroll) {
             player = ui.players[turn.player];
+            var showWords = !ui.isDuplicate || turn.player == ui.playerNumber;
             var div = DIV({ 'class': 'moveScore' },
                           DIV({ 'class': 'score' },
                               SPAN({ 'class': 'playerName' }, player.name),
@@ -90,13 +93,18 @@ function UI(game) {
             case 'move':
                 turn.move.words.forEach(function (word) {
                     $(div).append(DIV({ 'class': 'moveDetail' },
-                                      SPAN({ 'class': 'word' }, word.word),
+                                      SPAN({ 'class': 'word', 'data-word': word.word }, showWords ? word.word : '_'.repeat(word.word.length)),
                                       SPAN({ 'class': 'score' }, word.score)));
                 });
                 if (turn.move.allTilesBonus) {
                     $(div).append(DIV({ 'class': 'moveDetail' },
-                                      SPAN({ 'class': 'word' }, "All tiles placed bonus"),
-                                      SPAN({ 'class': 'score' }, 50)));
+                                      SPAN({ 'class': 'word' }, "ScraboulouBonus !"),
+                                      SPAN({ 'class': 'score' }, +50)));
+                }
+                if (turn.winningTurn) {
+                    $(div).append(DIV({ 'class': 'moveDetail' },
+                                      SPAN({ 'class': 'word' }, turn.winningTurn.message),
+                                      SPAN({ 'class': 'score' }, turn.winningTurn.score)));
                 }
                 break;
             case 'pass':
@@ -117,6 +125,14 @@ function UI(game) {
             $('#log').append(div);
         }
 
+        function revealPlayerWords() {
+            $('span.word').each(function() {
+                const word = $(this).data('word');
+                if (word)
+                    $(this).text(word);
+            });
+        }
+
         function processMoveScore(turn) {
             player = ui.players[turn.player];
             player.score += turn.score;
@@ -127,17 +143,20 @@ function UI(game) {
             if (nextGameKey) {
                 $('#log')
                     .append(DIV({ 'class': 'nextGame' },
-                                A({ href: '/game/' + nextGameKey + '/' + $.cookie(ui.gameKey)}, "next game")));
+                                A({ href: '/game/' + nextGameKey + '/' + $.cookie(ui.gameKey)}, "partie suivante")));
                 $('#makeNextGame').remove();
             } else {
-                var makeNextGameButton = BUTTON(null, "Make new game");
+                var makeNextGameButton = BUTTON(null, "Créer Nouvelle Partie");
                 $(makeNextGameButton)
                     .on('click', function() {
                         ui.sendMoveToServer('newGame', null);
                     });
+                // $('#log')
+                //     .append(DIV({ 'id': 'makeNextGame' },
+                //                 'Click ', makeNextGameButton, ' if you want to play the same language and opponents again'));
                 $('#log')
                     .append(DIV({ 'id': 'makeNextGame' },
-                                'Click ', makeNextGameButton, ' if you want to play the same language and opponents again'));
+                                'Cliquer ', makeNextGameButton, ' pour dupliquer la partie'));
             }
         }
 
@@ -151,10 +170,10 @@ function UI(game) {
                 player.rack = endPlayer.rack;
                 if (player.tallyScore > 0) {
                     $('#log').append(DIV({ 'class': 'gameEndScore' },
-                                         player.name + ' gained ' + player.tallyScore + ' points from racks of the other players'));
+                                         player.name + ' a gagné ' + player.tallyScore + ' points des racks des autres joueurs'));
                 } else {
                     $('#log').append(DIV({ 'class': 'gameEndScore' },
-                                         player.name + ' lost ' + -player.tallyScore + ' points for his rack containing the letters '
+                                         player.name + ' a perdu ' + -player.tallyScore + ' points car son rack contenanit les lettres '
                                          + _.without(player.rack.squares.map(function (square) {
                                              if (square.tile) {
                                                  return square.tile.letter;
@@ -172,11 +191,11 @@ function UI(game) {
             $('#whosturn').empty();
             $('#log')
                 .append(DIV({ 'class': 'gameEnded' },
-                            'Game has ended, '
+                            'Partie terminée, '
                             + joinProse(winners.map(function (player) {
-                                return youHaveWon ? 'you' : player.name
+                                return youHaveWon ? 'tu' : player.name
                             }))
-                            + (((winners.length == 1) && !youHaveWon) ? ' has ' : ' have ') + 'won'));
+                            + (((winners.length == 1) && !youHaveWon) ? ' a ' : ' as ') + 'gagné'));
             displayNextGameMessage(endMessage.nextGameKey);
         }
 
@@ -187,13 +206,27 @@ function UI(game) {
             }
         }
 
+        function unPlaceLastTiles() {
+            if (!ui.lastMove || !ui.lastMove.tilesPlaced.length)
+                return;
+            for (var i = 0; i < ui.lastMove.tilesPlaced.length; i++) {
+                var tilePlaced = ui.lastMove.tilesPlaced[i];
+                var square = ui.board.squares[tilePlaced.x][tilePlaced.y];
+                if (square.tile.isBlank())
+                    square.tile.letter = ' ';
+                square.placeTile(null);
+                ui.updateBoardSquare(square);
+            }
+            ui.lastMove.tilesPlaced = [];
+        }
+
         function displayWhosTurn(playerNumber) {
             if (playerNumber == ui.playerNumber) {
-                $('#whosturn').empty().text("Your turn");
+                $('#whosturn').empty().text("C'est ton tour");
                 $('#turnControls').css('display', 'block');
             } else if (typeof playerNumber == 'number') {
                 var name = ui.players[playerNumber].name;
-                $('#whosturn').empty().text(name + "'" + ((name.charAt(name.length - 1) == 's') ? '' : 's') + " turn");
+                $('#whosturn').empty().text(`C'est à ${name} de jouer`);
                 $('#turnControls').css('display', 'none');
             } else {
                 $('#whosturn').empty();
@@ -202,8 +235,11 @@ function UI(game) {
         }
 
         $('#log').append(DIV({ 'class': 'gameStart' },
-                             gameData.language + ' game started'));
+                             `Partie démarrée - ${gameData.language} ${gameData.variant}`));
         gameData.turns.map(appendTurnToLog);
+        if (ui.turnCount % ui.players.length === 0) {
+            revealPlayerWords();
+        }
 
         if (gameData.endMessage) {
             displayEndMessage(gameData.endMessage);
@@ -220,7 +256,7 @@ function UI(game) {
         var lastTurn = gameData.turns.length && gameData.turns[gameData.turns.length - 1];
 
         if (lastTurn && (lastTurn.type == 'move')) {
-            if (yourTurn) {
+            if (yourTurn && !ui.isDuplicate()) {
                 ui.addChallengeButton();
             } else if (lastTurn.player == ui.playerNumber) {
                 ui.addTakeBackMoveButton();
@@ -231,7 +267,7 @@ function UI(game) {
         if (BrowserDetect.browser == 'Firefox') {
             transports = ['htmlfile', 'xhr-polling', 'jsonp-polling'];
         }
-        
+
         ui.socket = io.connect(null, { transports: transports });
         ui.socket
             .on('connect', function(data) {
@@ -252,10 +288,20 @@ function UI(game) {
             .on('turn', function (turn) {
                 console.log('turn', turn);
                 appendTurnToLog(turn);
+                ui.turnCount++;
+                if (ui.isDuplicate() && turn.winningTurn) {
+                    revealPlayerWords();
+                }
                 scrollLogToEnd(300);
                 processMoveScore(turn);
+                if (ui.isDuplicate()) {
+                    if (turn.winningTurn) {
+                        unPlaceLastTiles();
+                        placeTurnTiles(turn.winningTurn);
+                    }
+                }
                 // If this has been a move by another player, place tiles on board
-                if (turn.type == 'move' && turn.player != ui.playerNumber) {
+                else if (turn.type == 'move' && turn.player != ui.playerNumber) {
                     placeTurnTiles(turn);
                 }
                 if (turn.type == 'challenge' || turn.type == 'takeBack') {
@@ -316,6 +362,10 @@ function UI(game) {
                     }
                 }
                 ui.updateGameStatus();
+                if (turn.newRackTiles && turn.newRackTiles.length) {
+                    // Duplicate mode
+                    ui.replaceRackSquares(turn.newRackTiles);
+                }
             })
             .on('gameEnded', function (endMessage) {
                 endMessage = thaw(endMessage, PrototypeMap);
@@ -496,12 +546,12 @@ UI.prototype.displayRemainingTileCounts = function() {
         $('#letterbagStatus')
             .empty()
             .append(DIV(null, SPAN({ id: 'remainingTileCount' }, counts.letterBag),
-                        " remaining tiles"));
+                        " lettres restantes"));
         $('#scoreboard td.remainingTiles').empty();
     } else {
         $('#letterbagStatus')
             .empty()
-            .append(DIV(null, "The letterbag is empty"));
+            .append(DIV(null, "Le sakalettres est vide"));
         var countElements = $('#scoreboard td.remainingTiles');
         for (var i = 0; i < counts.players.length; i++) {
             var count = counts.players[i];
@@ -510,7 +560,7 @@ UI.prototype.displayRemainingTileCounts = function() {
                 .append('(' + count + ')');
         }
     }
-    if (counts.letterBag < 7) {
+    if (ui.isDuplicate() || counts.letterBag < 7) {
         $('#swapRack').hide();
     } else {
         $('#swapRack').show();
@@ -540,6 +590,10 @@ UI.prototype.idToSquare = function(id) {
     } else {
         throw "cannot parse id " + id;
     }
+};
+
+UI.prototype.isDuplicate = function() {
+    return this.variant === 'duplicate';
 };
 
 UI.prototype.updateSquare = function(square) {
@@ -589,9 +643,9 @@ UI.prototype.updateBoardSquare = function(square) {
                 ui.selectSquare(square);
             }
         );
-        
+
         var doneOnce = false;
-        
+
         $(div).draggable({
         revert: "invalid",
         opacity: 1,
@@ -603,7 +657,7 @@ UI.prototype.updateBoardSquare = function(square) {
                         .animate({'font-size' : '120%'}, 300)
                         .addClass("dragBorder");
         },
-        
+
         drag: function(event, jui) {
             if (!doneOnce) {
             $(jui.helper).addClass("dragBorder");
@@ -695,7 +749,7 @@ UI.prototype.updateBoardSquare = function(square) {
         .empty()
         .append(div);
 };
-    
+
 UI.prototype.drawBoard = function() {
     var board = this.board;
 
@@ -727,9 +781,9 @@ UI.prototype.updateRackSquare = function(square) {
         .parent()
         .empty()
         .append(div);
-    
+
     div.setAttribute('id', id);
-    
+
     var a = document.createElement('a');
     div.appendChild(a);
 
@@ -810,9 +864,9 @@ UI.prototype.drawRack = function() {
 
     $('#rack')
         .append(DIV({ id: 'rackButtons' },
-                    BUTTON({ id: 'Shuffle' }, "Shuffle"),
+                    BUTTON({ id: 'Shuffle' }, "Mélanger"),
                     BR(),
-                    BUTTON({ id: 'TakeBackTiles' }, "TakeBackTiles")),
+                    BUTTON({ id: 'TakeBackTiles' }, "Reprendre")),
                 TABLE(null,
                       TR(null,
                          _.range(8).map(function (x) {
@@ -831,6 +885,8 @@ UI.prototype.drawRack = function() {
 };
 
 UI.prototype.drawSwapRack = function() {
+    if (ui.isDuplicate())
+        return;
     var swapRack = this.swapRack;
     $('#swapRack')
         .append(TABLE(null,
@@ -934,7 +990,7 @@ UI.prototype.updateGameStatus = function() {
     $('#move').empty();
     this.displayRemainingTileCounts();
     if (this.board.tileCount > 0) {
-        this.setMoveAction('commitMove', 'Make move');
+        this.setMoveAction('commitMove', 'Valider Mon Tour');
         var move = calculateMove(this.board.squares);
         if (move.error) {
             $('#move')
@@ -957,7 +1013,7 @@ UI.prototype.updateGameStatus = function() {
         $('#turnButton').removeAttr('disabled');
         $('#TakeBackTiles').css('visibility', 'inherit');
     } else {
-        this.setMoveAction('pass', 'Pass');
+        this.setMoveAction('pass', 'Passer Mon Tour');
         $('#board .ui-droppable').droppable('enable');
         $('#turnButton').removeAttr('disabled');
         $('#TakeBackTiles').css('visibility', 'hidden');
@@ -1022,6 +1078,20 @@ UI.prototype.endMove = function() {
     this.boardLocked(true);
 };
 
+UI.prototype.replaceRackSquares = function(tiles) {
+    tiles = tiles.reverse();
+    ui.rack.tileCount = 0;
+    ui.rack.squares.forEach(function (square) {
+        square.placeTile(null);
+        if (tiles.length) {
+            let t = tiles.pop();
+            square.placeTile(new Tile(t.letter, t.score));
+            ui.rack.tileCount++;
+            ui.updateRackSquare(square);
+        }
+    });
+}
+
 UI.prototype.processMoveResponse = function(data) {
     console.log('move response:', data);
     var ui = this;
@@ -1059,6 +1129,7 @@ UI.prototype.commitMove = function() {
             square.tileLocked = true;
             ui.updateBoardSquare(square);
         }
+        ui.lastMove = move;
         ui.board.tileCount = 0;
         ui.sendMoveToServer('makeMove',
                             move.tilesPlaced,
@@ -1073,6 +1144,8 @@ UI.prototype.commitMove = function() {
 
 UI.prototype.addLastMoveActionButton = function(action, label) {
     var ui = this;
+    if (ui.isDuplicate())
+        return;
     var button = BUTTON({ id: action }, label);
     $(button).click(function() {
         ui[action]();
@@ -1173,7 +1246,7 @@ UI.prototype.TakeBackTiles = function() {
         ui.rack.tileCount++;
         ui.updateRackSquare(square);
     }
-        
+
     ui.board.forAllSquares(function(boardSquare) {
         if (boardSquare.tile && !boardSquare.tileLocked) {
             putBackToRack(boardSquare.tile);

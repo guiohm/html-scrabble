@@ -45,7 +45,7 @@ function maybeLoadConfig() {
         catch (e) {
             console.log('error reading configuration:\n' + e);
             process.exit(1);
-        }            
+        }
     }
 
     var defaultConfig = readConfig(__dirname + "/config-default.json");
@@ -84,7 +84,7 @@ app.use(bodyParser());
 app.use(cookieParser());
 app.use(express.static(__dirname + '/client'));
 app.use(errorhandler({
-    dumpExceptions: true, 
+    dumpExceptions: true,
     showStack: true
 }));
 
@@ -130,21 +130,40 @@ util.inherits(Game, EventEmitter);
 
 db.registerObject(Game);
 
-Game.create = function(language, players) {
+Game.create = function(language, players, variant = "duplicate") {
     var game = new Game();
     game.language = language;
     game.players = players;
+    game.variant = variant;
     game.key = makeKey();
     game.letterBag = scrabble.LetterBag.create(language);
-    for (var i = 0; i < players.length; i++) {
-        var player = players[i];
-        player.index = i;
-        player.rack = new scrabble.Rack(8);
+    if (game.isDuplicate()) {
+        game.rack = new scrabble.Rack(8);
         for (var j = 0; j < 7; j++) {
-            player.rack.squares[j].tile = game.letterBag.getRandomTile();
+            game.rack.squares[j].tile = game.letterBag.getRandomTile();
         }
-        player.score = 0;
+        for (var i = 0; i < players.length; i++) {
+            var player = players[i];
+            player.index = i;
+            player.rack = game.rack;
+            // player.rack = new scrabble.Rack(8);
+            // for (var j = 0; j < 7; j++) {
+            //     player.rack.squares[j].tile = game.rack.squares[j].tile;
+            // }
+            player.score = 0;
+        }
+    } else {
+        for (var i = 0; i < players.length; i++) {
+            var player = players[i];
+            player.index = i;
+            player.rack = new scrabble.Rack(8);
+            for (var j = 0; j < 7; j++) {
+                player.rack.squares[j].tile = game.letterBag.getRandomTile();
+            }
+            player.score = 0;
+        }
     }
+
     console.log('players', players);
     game.board = new scrabble.Board();
     game.turns = [];
@@ -157,6 +176,11 @@ Game.create = function(language, players) {
                             + joinProse(game.otherPlayers(player)));
     });
     return game;
+}
+
+Game.prototype.isDuplicate = function()
+{
+    return this.variant === "duplicate";
 }
 
 Game.prototype.otherPlayers = function(player)
@@ -252,58 +276,44 @@ Game.prototype.makeMove = function(player, placementList) {
 
     // validate the move (i.e. does the user have the tiles placed, are the tiles free on the board
     var rackSquares = player.rack.squares.slice();          // need to clone
-    var turn;
-    var placements = placementList.map(function (placement) {
-        var fromSquare = null;
-        for (var i = 0; i < rackSquares.length; i++) {
-            var square = rackSquares[i];
-            if (square && square.tile &&
-                (square.tile.letter == placement.letter
-                 || (square.tile.isBlank() && placement.blank))) {
-                if (placement.blank) {
-                    square.tile.letter = placement.letter;
-                }
-                fromSquare = square;
-                delete rackSquares[i];
-                break;
-            }
-        }
-        if (!fromSquare) {
-            throw 'cannot find letter ' + placement.letter + ' in rack of player ' + player.name;
-        }
-        placement.score = fromSquare.tile.score;
-        var toSquare = game.board.squares[placement.x][placement.y];
-        if (toSquare.tile) {
-            throw 'target tile ' + placement.x + '/' + placement.y + ' is already occupied';
-        }
-        return [fromSquare, toSquare];
-    });
+    var placements = game.ComputePlacements(placementList, rackSquares, player);
     placements.forEach(function(squares) {
         var tile = squares[0].tile;
         squares[0].placeTile(null);
         squares[1].placeTile(tile);
     });
     var move = scrabble.calculateMove(game.board.squares);
-    if (move.error) {
+
+    if (move.error || game.isDuplicate()) {
         // fixme should be generalized function -- wait, no rollback? :|
         placements.forEach(function(squares) {
             var tile = squares[1].tile;
             squares[1].placeTile(null);
             squares[0].placeTile(tile);
+            if (tile.isBlank())
+                tile.letter = ' ';
         });
-        throw move.error;
+        if (move.error)
+            throw move.error;
+    } else {
+        placements.forEach(function(squares) {
+            squares[1].tileLocked = true;
+        });
     }
-    placements.forEach(function(squares) {
-        squares[1].tileLocked = true;
-    });
 
     // add score
     player.score += move.score;
 
     // get new tiles
-    var newTiles = game.letterBag.getRandomTiles(placements.length);
-    for (var i = 0; i < newTiles.length; i++) {
-        placements[i][0].placeTile(newTiles[i]);
+    var newTiles = [];
+    if (game.isDuplicate())
+    {
+        // We wait for end of turn to get new tiles
+    } else {
+        newTiles = game.letterBag.getRandomTiles(placements.length);
+        for (var i = 0; i < newTiles.length; i++) {
+            placements[i][0].placeTile(newTiles[i]);
+        }
     }
 
     game.previousMove = { placements: placements,
@@ -320,8 +330,39 @@ Game.prototype.makeMove = function(player, placementList) {
                placements: placementList } ];
 }
 
+Game.prototype.ComputePlacements = function(placementList, rackSquares, player = null) {
+    var game = this;
+    return placementList.map(function (placement) {
+        var fromSquare = null;
+        for (var i = 0; i < rackSquares.length; i++) {
+            var square = rackSquares[i];
+            if (square && square.tile &&
+                (square.tile.letter == placement.letter
+                 || (square.tile.isBlank() && placement.blank))) {
+                if (placement.blank) {
+                    square.tile.letter = placement.letter;
+                }
+                fromSquare = square;
+                delete rackSquares[i];
+                break;
+            }
+        }
+        if (!fromSquare) {
+            throw 'cannot find letter ' + placement.letter + ' in rack of player ' + (player && player.name);
+        }
+        placement.score = fromSquare.tile.score;
+        var toSquare = game.board.squares[placement.x][placement.y];
+        if (toSquare.tile) {
+            throw 'target tile ' + placement.x + '/' + placement.y + ' is already occupied';
+        }
+        return [fromSquare, toSquare];
+    });
+}
+
 Game.prototype.challengeOrTakeBackMove = function(type, player) {
     game = this;
+    if (game.isDuplicate())
+        throw 'cannot challenge in duplicate mode';
     if (!game.previousMove) {
         throw 'cannot challenge move - no previous move in game';
     }
@@ -388,6 +429,9 @@ Game.prototype.returnPlayerLetters = function(player, letters) {
 Game.prototype.swapTiles = function(player, letters) {
     var game = this;
 
+    if (game.isDuplicate())
+        throw 'cannot swap in duplicate mode';
+
     if (game.letterBag.remainingTileCount() < 7) {
         throw 'cannot swap, letterbag contains only ' + game.letterBag.remainingTileCount() + ' tiles';
     }
@@ -442,11 +486,60 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
     // store turn log
     game.turns.push(turn);
 
+    if (game.isDuplicate()) {
+        var turnCount = game.turns.length;
+        var playerCount = game.players.length;
+        if (turnCount % playerCount === 0) {
+            // end of duplicate turn, now calculate who wins the turn
+            // and keep only his proposal, then get new tiles for
+            // everyone
+
+            // 1. Who wins
+            var winningTurn = { score: 0 };
+            for (var i = turnCount - 1; i >= turnCount - playerCount; i--) {
+                //TODO handle draw
+                if (game.turns[i].score > winningTurn.score) {
+                    winningTurn = game.turns[i];
+                }
+            }
+
+            // 2. Keep only winner's turn on board
+            var placements = game.ComputePlacements(winningTurn.placements, game.rack.squares.slice());
+            placements.forEach(function(squares) {
+                var tile = squares[0].tile;
+                squares[0].placeTile(null);
+                squares[1].placeTile(tile);
+                squares[1].tileLocked = true;
+            });
+
+            // 3. New tiles for everyone, yeah!!
+            newTiles = game.letterBag.getRandomTiles(placements.length);
+            for (var i = 0; i < newTiles.length; i++) {
+                // pacements[x][0] is game.rack
+                placements[i][0].placeTile(newTiles[i]);
+            }
+
+            // 4. Update game state
+            turn.winningTurn = {
+                message: `${game.players[winningTurn.player].name} remporte la manche`,
+                placements: winningTurn.placements,
+                score: winningTurn.score,
+            };
+            turn.newRackTiles = game.rack.squares.filter(s => s.tile).map(s => s.tile);
+
+            newTiles = [];
+        }
+    }
+
     // determine whether the game's end has been reached
     if (game.passes == (game.players.length * 2)) {
         game.finish('all players passed two times');
     } else if (_.every(player.rack.squares, function(square) { return !square.tile; })) {
         game.finish('player ' + game.whosTurn + ' ended the game');
+    } else if (game.isDuplicate() && game.rack.length <= 1) {
+        game.finish('Not enough letter in letterbag');
+    } else if (false && game.letterBag.remainingTileCount() <= 1) {
+        game.finish('Not enough letter in letterbag');
     } else if (turn.type != 'challenge') {
         // determine who's turn it is now
         game.whosTurn = (game.whosTurn + 1) % game.players.length;
@@ -497,40 +590,42 @@ Game.prototype.finish = function(reason) {
 
     delete game.whosTurn;
 
-    // Tally scores  
-    var playerWithNoTiles;
-    var pointsRemainingOnRacks = 0;
-    game.players.forEach(function(player) {
-        var tilesLeft = false;
-        var rackScore = 0;
-        player.rack.squares.forEach(function (square) {
-            if (square.tile) {
-                rackScore += square.tile.score;
-                tilesLeft = true;
+    if (!game.isDuplicate()) {
+        // Tally scores
+        var playerWithNoTiles;
+        var pointsRemainingOnRacks = 0;
+        game.players.forEach(function(player) {
+            var tilesLeft = false;
+            var rackScore = 0;
+            player.rack.squares.forEach(function (square) {
+                if (square.tile) {
+                    rackScore += square.tile.score;
+                    tilesLeft = true;
+                }
+            });
+            if (tilesLeft) {
+                player.score -= rackScore;
+                player.tallyScore = -rackScore;
+                pointsRemainingOnRacks += rackScore;
+            } else {
+                if (playerWithNoTiles) {
+                    throw "unexpectedly found more than one player with no tiles when finishing game";
+                }
+                playerWithNoTiles = player;
             }
         });
-        if (tilesLeft) {
-            player.score -= rackScore;
-            player.tallyScore = -rackScore;
-            pointsRemainingOnRacks += rackScore;
-        } else {
-            if (playerWithNoTiles) {
-                throw "unexpectedly found more than one player with no tiles when finishing game";
-            }
-            playerWithNoTiles = player;
-        }
-    });
 
-    if (playerWithNoTiles) {
-        playerWithNoTiles.score += pointsRemainingOnRacks;
-        playerWithNoTiles.tallyScore = pointsRemainingOnRacks;
+        if (playerWithNoTiles) {
+            playerWithNoTiles.score += pointsRemainingOnRacks;
+            playerWithNoTiles.tallyScore = pointsRemainingOnRacks;
+        }
     }
 
     var endMessage = { reason: reason,
                        players: game.players.map(function(player) {
                            return { name: player.name,
                                     score: player.score,
-                                    tallyScore: player.tallyScore,
+                                    tallyScore: player.tallyScore || 0,
                                     rack: player.rack };
                        })
                      };
@@ -665,6 +760,7 @@ app.get("/game/:gameKey", gameHandler(function (game, req, res, next) {
             var response = { board: game.board,
                              turns: game.turns,
                              language: game.language,
+                             variant: game.variant,
                              whosTurn: game.whosTurn,
                              remainingTileCounts: game.remainingTileCounts(),
                              legalLetters: game.letterBag.legalLetters,
