@@ -761,6 +761,7 @@ app.get("/game/:gameKey", gameHandler(function (game, req, res, next) {
                              turns: game.turns,
                              language: game.language,
                              variant: game.variant,
+                             hideForkMeGithubBanner: config.hideForkMeGithubBanner,
                              whosTurn: game.whosTurn,
                              remainingTileCounts: game.remainingTileCounts(),
                              legalLetters: game.letterBag.legalLetters,

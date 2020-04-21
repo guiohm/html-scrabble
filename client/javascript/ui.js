@@ -46,6 +46,10 @@ function UI(game) {
         ui.keyboardPlacements = [];
         ui.remainingTileCounts  = gameData.remainingTileCounts;
 
+        if (gameData.hideForkMeGithubBanner) {
+            $('#githubforkbanner').hide();
+        }
+
         var playerNumber = 0;
         $('#scoreboard')
             .append(TABLE(null,

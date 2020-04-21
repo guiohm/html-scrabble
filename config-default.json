@@ -1,6 +1,7 @@
 {
     "port": 9093,
     "baseUrl": "http://localhost:9093/",
+    "hideForkMeGithubBanner": false,
     "mailSender": "Scrabble Server <scrabble@netzhansa.com>",
     "mailTransportConfig": {
         "host": "localhost"
