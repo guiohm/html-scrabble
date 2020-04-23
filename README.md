@@ -9,8 +9,8 @@ This is a fork of Hans Huebner's https://github.com/hanshuebner/html-scrabble
 
 ## Future changes
 
+* Dictionary search/validation capability (in progress)
 * Internationalization
-* Dictionary search/validation capability
 * Timer
 * Improved rack drag'n'drop implementation (include support for touch screens)
 * Improved 'Duplicate' variant support:

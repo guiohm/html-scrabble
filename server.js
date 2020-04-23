@@ -72,6 +72,31 @@ console.log('config', config);
 
 // //////////////////////////////////////////////////////////////////////
 
+function DictionarySvc () {
+    this.cache = {};
+}
+DictionarySvc.prototype.get = function (language) {
+    if (!(language in this.cache)) {
+        const fileName = __dirname + '/dictionaries/' + language + '.dic';
+        if (!fs.existsSync(fileName)) {
+            console.log('cannot find dictionary', fileName);
+            return null;
+        }
+        try {
+            this.cache[language] = fs.readFileSync(fileName, 'utf8');
+        }
+        catch (e) {
+            console.log('error reading dictionary:\n' + e);
+        }
+    }
+    return this.cache[language];
+}
+
+const dictSvc = new DictionarySvc();
+const frenchDict = dictSvc.get('francais');
+console.log('dict loaded');
+// //////////////////////////////////////////////////////////////////////
+
 var smtp = nodemailer.createTransport('SMTP', config.mailTransportConfig);
 
 var app = express();

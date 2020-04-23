@@ -39,7 +39,7 @@ div#controls > div
     border-color: #DCDCC6;
 
     border-style: solid;
-	
+
     -webkit-border-radius: 0.4em;
     -moz-border-radius: 0.4em;
     -ms-border-radius: 0.4em;
@@ -51,7 +51,7 @@ div#controls > div
 }
 
 div#log {
-    height: 10em;
+    height: 16em;
     overflow: auto;
 }
 
@@ -373,7 +373,7 @@ div.tableDivWrap td div.Tile
     background-color: #F7F7E3;
     border-color: #DCDCC6;
     border-style: solid;
-	
+
     -webkit-border-radius: 0.2em;
     -moz-border-radius: 0.2em;
     -ms-border-radius: 0.2em;
@@ -436,7 +436,7 @@ div.tableDivWrap td div.Selected,
     -o-animation-iteration-count: infinite;
     -o-animation-direction: alternate;
     -o-animation-timing-function: linear;
-	
+
     animation-name: glow;
     animation-duration: 0.5s;
     animation-iteration-count: infinite;
