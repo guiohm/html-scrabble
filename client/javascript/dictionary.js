@@ -1,16 +1,18 @@
 class Dictionary {
+    #trieDict = null;
+    #cacheValid = true;
+
+    static instance = null;
 
     constructor() {
-        this.trieDict = null;
-        this.cacheValid = true;
-        return this;
+        Dictionary.instance = this;
     }
 
     loadLanguage(language) {
-        if (this.cacheValid && window.localStorage !== null && window.localStorage.scrabbleDict) {
+        if (this.#cacheValid && window.localStorage !== null && window.localStorage.scrabbleDict) {
             try {
                 if (!this.dictReady(JSON.parse(window.localStorage.scrabbleDict))) {
-                    this.cacheValid = false;
+                    this.#cacheValid = false;
                     throw 'Invalid data';
                 }
             } catch (e) {
@@ -45,11 +47,11 @@ class Dictionary {
         if (!trieDict || typeof trieDict != 'object') {
             return false;
         }
-        this.trieDict = trieDict;
+        this.#trieDict = trieDict;
     }
 
     findLongestWords(letters, trieContext) {
-        trieContext = trieContext || this.trieDict;
+        trieContext = trieContext || this.#trieDict;
         const letter = letters[0];
         let wordList = [];
 

@@ -5,11 +5,11 @@ This is a fork of Hans Huebner's https://github.com/hanshuebner/html-scrabble
 ## Changes from original repo
 
 * Implemented 'Duplicate' variant (https://en.wikipedia.org/wiki/Duplicate_Scrabble)
+* Dictionary search/validation capability (using TRIE search)
 * **UI in French only ATM**. __I quickly replaced english with french before playing with falimy while in confinment. This is bad, sorry. I'll fix that later__
 
 ## Future changes
 
-* Dictionary search/validation capability (in progress)
 * Internationalization
 * Timer
 * Improved rack drag'n'drop implementation (include support for touch screens)
@@ -20,7 +20,7 @@ This is a fork of Hans Huebner's https://github.com/hanshuebner/html-scrabble
     * Arbitration when draw at end of round
 
 ---
-## Below is the original info unchanged from Hans Huebner
+## Below is the original info almost unchanged from Hans Huebner
 ---
 
 ## Installing
@@ -30,6 +30,12 @@ dependencies:
 
 ```
 $ npm install
+```
+
+Some react components have been added (divergence from original repo):
+
+```
+$ npm run build-jsx
 ```
 
 ## Configuration

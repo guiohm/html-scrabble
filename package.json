@@ -39,8 +39,8 @@
     },
     "scripts": {
         "build-release": "node node_modules/release-utils/npm-release.js",
-        "build-jsx": "npx babel client/javascript --out-dir client/javascript/build/ --presets react-app/prod",
-        "watch-jsx": "npx babel --watch client --out-dir client/javascript/build/ --presets react-app/prod",
+        "build-jsx": "npx babel client/javascript/react --out-dir client/javascript/react-output --presets react-app/prod",
+        "watch-jsx": "npx babel --watch client/javascript/react --out-dir client/javascript/react-output --presets react-app/dev",
         "test-client": "jest --notify"
     }
 }

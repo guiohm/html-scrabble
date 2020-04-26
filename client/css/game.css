@@ -125,6 +125,18 @@ div#turnControls {
     display: none;
 }
 
+div#dictionary span {
+   width: 66px;
+}
+
+div#dictionary input {
+    margin-left: 12px;
+}
+
+div#dictionary ul {
+    margin-left: 66px;
+}
+
 div#blankLetterRequester {
     display: none;
     font-size: 2em;

@@ -419,6 +419,8 @@ function UI(game) {
         if (gameData.useDictionary) {
             ui.dictionary = new Dictionary().loadLanguage(gameData.language);
             console.log(ui.dictionary);
+        } else {
+            $('#dictionary').hide();
         }
     });
     var button = BUTTON({ id: 'turnButton', action: 'pass' }, 'Pass')

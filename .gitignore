@@ -1,6 +1,7 @@
 config.json
 npm-debug.log
 node_modules
+client/javascript/react-output
 *.db
 *.db.old
 .idea
