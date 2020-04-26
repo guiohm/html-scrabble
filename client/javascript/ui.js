@@ -43,6 +43,7 @@ function UI(game) {
         ui.turnCount = gameData.turns.length;
         ui.legalLetters = gameData.legalLetters;
         ui.players = gameData.players;
+        ui.dictionary = null;
         ui.keyboardPlacements = [];
         ui.remainingTileCounts  = gameData.remainingTileCounts;
 
@@ -415,6 +416,10 @@ function UI(game) {
             .bind('RefreshRack', ui.eventCallback(ui.refreshRack))
             .bind('RefreshBoard', ui.eventCallback(ui.refreshBoard));
 
+        if (gameData.useDictionary) {
+            ui.dictionary = new Dictionary().loadLanguage(gameData.language);
+            console.log(ui.dictionary);
+        }
     });
     var button = BUTTON({ id: 'turnButton', action: 'pass' }, 'Pass')
     $(button).bind('click', ui.eventCallback(ui.makeMove));
@@ -674,7 +679,7 @@ UI.prototype.updateBoardSquare = function(square) {
         });
     }
         if (square.tile.letter && square.tile.letter === "_") {
-            square.tile.letter = "";
+            square.tile.letter = " ";
         }
         $(div).append(A(null,
                         SPAN({ 'class': 'Letter' }, square.tile.letter ? square.tile.letter : ''),
@@ -954,8 +959,9 @@ UI.prototype.moveTile = function(fromSquare, toSquare) {
     var ui = this;
     fromSquare.placeTile(null);
     fromSquare.owner.tileCount--;
-    if (tile.isBlank() && !tile.letter || (tile.letter == ' ')) {
-        if (fromSquare.owner != this.board && toSquare.owner == this.board) {
+    if (tile.isBlank()) {
+        if (fromSquare.owner != this.board && toSquare.owner == this.board
+            && (!tile.letter || tile.letter == ' ')) {
             var blankLetterRequesterButton = $("#blankLetterRequester button");
             var blankLetterRequesterSkip = $("#blankLetterRequesterSkip button");
             function setLetter(letter) {
@@ -980,7 +986,7 @@ UI.prototype.moveTile = function(fromSquare, toSquare) {
             });
             $.blockUI({ message: $('#blankLetterRequester') });
         } else if (toSquare.owner == ui.rack || toSquare.owner == ui.swapRack) {
-            tile.letter = ' ';
+            tile.letter = '_';
         }
     }
     toSquare.placeTile(tile);
@@ -991,23 +997,34 @@ UI.prototype.moveTile = function(fromSquare, toSquare) {
 };
 
 UI.prototype.updateGameStatus = function() {
+    var ui = this;
     $('#move').empty();
     this.displayRemainingTileCounts();
     if (this.board.tileCount > 0) {
+        let canValidate = true;
         this.setMoveAction('commitMove', 'Valider Mon Tour');
         var move = calculateMove(this.board.squares);
         if (move.error) {
-            $('#move')
-                .append(move.error);
-            $('#turnButton').attr('disabled', 'disabled');
+            $('#move').append(move.error);
+            canValidate = false;
         } else {
-            $('#move')
-                .append(DIV(null, "score: " + move.score));
+            $('#move').append(DIV(null, "score: " + move.score));
             move.words.forEach(function (word) {
+                let invalid = false;
+                if (ui.dictionary) {
+                    const words = ui.dictionary.findLongestWords(word.word);
+                    if (!words.length || words[0].length < word.word.length) {
+                        canValidate = false;
+                        invalid = true;
+                    }
+                }
                 $('#move')
-                    .append(DIV(null, word.word + " " + word.score));
+                .append(DIV({ 'class': invalid ? 'invalid' : 'valid'}, word.word.replace(' ', '_') + " " + word.score));
             });
             $('#turnButton').removeAttr('disabled');
+        }
+        if (!canValidate) {
+            $('#turnButton').attr('disabled', 'disabled');
         }
         $('#TakeBackTiles').css('visibility', 'inherit');
         $('#swapRack').hide();

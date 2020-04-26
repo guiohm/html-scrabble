@@ -28,6 +28,7 @@ var argv = require('optimist')
 
 var scrabble = require('./client/javascript/scrabble.js');
 var icebox = require('./client/javascript/icebox.js');
+var DictionaryService = require('./dictionary-service');
 var DB = require('./db.js');
 
 var EventEmitter = require('events').EventEmitter;
@@ -72,29 +73,8 @@ console.log('config', config);
 
 // //////////////////////////////////////////////////////////////////////
 
-function DictionarySvc () {
-    this.cache = {};
-}
-DictionarySvc.prototype.get = function (language) {
-    if (!(language in this.cache)) {
-        const fileName = __dirname + '/dictionaries/' + language + '.dic';
-        if (!fs.existsSync(fileName)) {
-            console.log('cannot find dictionary', fileName);
-            return null;
-        }
-        try {
-            this.cache[language] = fs.readFileSync(fileName, 'utf8');
-        }
-        catch (e) {
-            console.log('error reading dictionary:\n' + e);
-        }
-    }
-    return this.cache[language];
-}
+const dictSvc = new DictionaryService();
 
-const dictSvc = new DictionarySvc();
-const frenchDict = dictSvc.get('francais');
-console.log('dict loaded');
 // //////////////////////////////////////////////////////////////////////
 
 var smtp = nodemailer.createTransport('SMTP', config.mailTransportConfig);
@@ -171,10 +151,6 @@ Game.create = function(language, players, variant = "duplicate") {
             var player = players[i];
             player.index = i;
             player.rack = game.rack;
-            // player.rack = new scrabble.Rack(8);
-            // for (var j = 0; j < 7; j++) {
-            //     player.rack.squares[j].tile = game.rack.squares[j].tile;
-            // }
             player.score = 0;
         }
     } else {
@@ -694,6 +670,13 @@ var gameListAuth = basicAuth(function(username, password) {
 
 // Handlers //////////////////////////////////////////////////////////////////
 
+app.get("/dictionary/:language", function(req, res) {
+    dictSvc.getAsync(req.params.language.toLowerCase()).then(dict => {
+        console.log(`Sending ${req.params.language} dictionary`);
+        res.send(JSON.stringify(dict));
+    })
+});
+
 app.get("/games",
         config.gameListLogin ? gameListAuth : function (req, res, next) { next(); },
         function(req, res) {
@@ -790,6 +773,7 @@ app.get("/game/:gameKey", gameHandler(function (game, req, res, next) {
                              whosTurn: game.whosTurn,
                              remainingTileCounts: game.remainingTileCounts(),
                              legalLetters: game.letterBag.legalLetters,
+                             useDictionary: config.useDictionary,
                              players: [] }
             var thisPlayer = game.lookupPlayer(req, true);
             for (var i = 0; i < game.players.length; i++) {

@@ -91,6 +91,14 @@ div#move {
     margin-bottom: 0.5em;
 }
 
+div#move .valid {
+    color: forestgreen;
+}
+
+div#move .invalid {
+    color: red;
+}
+
 div#chat {
     height: 6em;
 }
