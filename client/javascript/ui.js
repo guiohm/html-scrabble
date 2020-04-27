@@ -299,7 +299,7 @@ function UI(game) {
             })
             .on('disconnect', function(data) {
                 console.log('socket disconnect');
-                $.blockUI({ message: '<h1>Server unavailable, please wait</h1>' });
+                $.blockUI({ message: '<h1>Connexion au serveur interrompue, merci de patienter</h1>' });
             })
             .on('turn', function (turn) {
                 console.log('turn', turn);
@@ -1100,10 +1100,13 @@ UI.prototype.boardLocked = function(newVal) {
         } else {
             $('#turnButton').removeAttr('disabled');
         }
-        this.board.locked = newVal;
-        this.refreshBoard();
+        // Don't refresh if not necessary
+        if (this.board.locked != newVal) {
+            this.board.locked = newVal;
+            this.refreshBoard();
+        }
     }
-    return this.isDuplicate() ? false : this.board.locked;
+    return this.board.locked;
 };
 
 UI.prototype.endMove = function() {
