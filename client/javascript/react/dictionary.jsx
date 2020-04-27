@@ -8,7 +8,7 @@ function SearchResults(props) {
 
   const listItems = props.results.map((result) =>
     <li key={result.toString()}>
-      <a href={'http://1mot.net/' + result.toLowerCase()} target="search"> {result} </a>
+      <a href={'http://1mot.net/' + result.toLowerCase()} title="Cliquer pour voir la définition" target="search"> {result} </a>
     </li>
   );
   return (

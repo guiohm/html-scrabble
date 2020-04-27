@@ -97,8 +97,9 @@ function UI(game) {
             switch (turn.type) {
             case 'move':
                 turn.move.words.forEach(function (word) {
+                    var wordStr = word.word.replace(' ', '_');
                     $(div).append(DIV({ 'class': 'moveDetail' },
-                                      SPAN({ 'class': 'word', 'data-word': word.word }, showWords ? word.word : '_'.repeat(word.word.length)),
+                                      SPAN({ 'class': 'word', 'data-word': wordStr }, showWords ? wordStr : '_'.repeat(wordStr.length)),
                                       SPAN({ 'class': 'score' }, word.score)));
                 });
                 if (turn.move.allTilesBonus) {
@@ -225,16 +226,26 @@ function UI(game) {
             ui.lastMove.tilesPlaced = [];
         }
 
-        function displayWhosTurn(playerNumber) {
-            if (playerNumber == ui.playerNumber) {
+        function displayWhosTurn(playerNumbers) {
+            if (!playerNumbers.length) {
+                $('#whosturn').empty();
+                $('#turnControls').css('display', 'none');
+                return;
+            }
+
+            if (ui.isDuplicate()) {
+                let names = playerNumbers.map(n => n == ui.playerNumber ? 'Toi' : ui.players[n].name);
+                $('#whosturn').empty().text(`C'est à ${names.join(', ')} de jouer`);
+                $('#turnControls').css('display', 'block');
+                return;
+            }
+
+            if (playerNumbers.includes(ui.playerNumber)) {
                 $('#whosturn').empty().text("C'est ton tour");
                 $('#turnControls').css('display', 'block');
-            } else if (typeof playerNumber == 'number') {
-                var name = ui.players[playerNumber].name;
-                $('#whosturn').empty().text(`C'est à ${name} de jouer`);
-                $('#turnControls').css('display', 'none');
             } else {
-                $('#whosturn').empty();
+                var name = ui.players[playerNumbers[0]].name;
+                $('#whosturn').empty().text(`C'est à ${name} de jouer`);
                 $('#turnControls').css('display', 'none');
             }
         }
@@ -252,9 +263,9 @@ function UI(game) {
 
         scrollLogToEnd(0);
 
-        var yourTurn = gameData.whosTurn == ui.playerNumber;
-        displayWhosTurn(gameData.whosTurn);
+        var yourTurn = gameData.whosTurn.length && gameData.whosTurn.includes(ui.playerNumber);
         ui.boardLocked(!yourTurn);
+        displayWhosTurn(gameData.whosTurn);
 
         ui.updateGameStatus();
 
@@ -349,17 +360,17 @@ function UI(game) {
                     }
                 }
                 ui.remainingTileCounts = turn.remainingTileCounts;
-                if (turn.whosTurn == ui.playerNumber) {
+                if (turn.whosTurn.includes(ui.playerNumber)) {
                     ui.playAudio("yourturn");
                 }
-                ui.boardLocked(turn.whosTurn != ui.playerNumber);
+                ui.boardLocked(!turn.whosTurn.includes(ui.playerNumber));
                 ui.removeMoveEditButtons();
-                if (typeof turn.whosTurn == 'number' && turn.type != 'challenge') {
+                if (typeof turn.whosTurn == 'object' && turn.type != 'challenge') {
                     displayWhosTurn(turn.whosTurn);
                     if (turn.type == 'move' && turn.player == ui.playerNumber) {
                         ui.addTakeBackMoveButton();
                     }
-                    if (turn.whosTurn == ui.playerNumber && turn.type != 'takeBack') {
+                    if (turn.whosTurn.includes(ui.playerNumber) && turn.type != 'takeBack') {
                         ui.notify('Your turn!', ui.players[turn.player].name + ' has made a move and now it is your turn.');
                         if (turn.type == 'move') {
                             ui.addChallengeButton();
@@ -988,7 +999,7 @@ UI.prototype.moveTile = function(fromSquare, toSquare) {
             });
             $.blockUI({ message: $('#blankLetterRequester') });
         } else if (toSquare.owner == ui.rack || toSquare.owner == ui.swapRack) {
-            tile.letter = '_';
+            tile.letter = ' ';
         }
     }
     toSquare.placeTile(tile);
@@ -1092,7 +1103,7 @@ UI.prototype.boardLocked = function(newVal) {
         this.board.locked = newVal;
         this.refreshBoard();
     }
-    return this.board.locked;
+    return this.isDuplicate() ? false : this.board.locked;
 };
 
 UI.prototype.endMove = function() {

@@ -29,6 +29,8 @@ class Dictionary {
                 // Cache the dictionary, if possible
                 if (window.localStorage !== null) {
                     try {
+                        // Sadly french TRIE dict is too big
+                        // TODO store original flat text file instead?
                         // window.localStorage.scrabbleDict = txt;
                     } catch (e) {
                         console.log(e);

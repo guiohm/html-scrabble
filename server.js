@@ -143,6 +143,7 @@ Game.create = function(language, players, variant = "duplicate") {
     game.key = makeKey();
     game.letterBag = scrabble.LetterBag.create(language);
     if (game.isDuplicate()) {
+        game.whosTurn = [];
         game.rack = new scrabble.Rack(8);
         for (var j = 0; j < 7; j++) {
             game.rack.squares[j].tile = game.letterBag.getRandomTile();
@@ -152,8 +153,11 @@ Game.create = function(language, players, variant = "duplicate") {
             player.index = i;
             player.rack = game.rack;
             player.score = 0;
+            game.whosTurn.push(i);
         }
     } else {
+        //TODO randomly choose the first player?
+        game.whosTurn = [0];
         for (var i = 0; i < players.length; i++) {
             var player = players[i];
             player.index = i;
@@ -168,7 +172,6 @@ Game.create = function(language, players, variant = "duplicate") {
     console.log('players', players);
     game.board = new scrabble.Board();
     game.turns = [];
-    game.whosTurn = 0;
     game.passes = 0;
     game.save();
     game.players.forEach(function (player) {
@@ -265,7 +268,7 @@ Game.prototype.ensurePlayerAndGame = function(player) {
     }
 
     // determine if it is this player's turn
-    if (player !== game.players[game.whosTurn]) {
+    if (!game.whosTurn.includes(player.index)) {
         throw "not this player's turn";
     }
 }
@@ -389,7 +392,7 @@ Game.prototype.challengeOrTakeBackMove = function(type, player) {
                challenger: player.index,
                player: previousMove.player.index,
                score: -previousMove.score,
-               whosTurn: ((type == 'challenge') ? game.whosTurn : previousMove.player.index),
+               whosTurn: ((type == 'challenge') ? game.whosTurn : [previousMove.player.index]),
                placements: previousMove.placements.map(function(placement) {
                    return { x: placement[1].x,
                             y: placement[1].y }
@@ -536,16 +539,28 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
     if (game.passes == (game.players.length * 2)) {
         game.finish('all players passed two times');
     } else if (_.every(player.rack.squares, function(square) { return !square.tile; })) {
-        game.finish('player ' + game.whosTurn + ' ended the game');
+        game.finish(game.players[game.whosTurn[0]].name + ' ended the game');
     } else if (game.isDuplicate() && game.rack.length <= 1) {
         game.finish('Not enough letter in letterbag');
-    } else if (false && game.letterBag.remainingTileCount() <= 1) {
+    } else if (game.letterBag.remainingTileCount() <= 1) {
         game.finish('Not enough letter in letterbag');
+    } else if (game.isDuplicate()) {
+        // determine who's turn it is now
+        if (turn.winningTurn) {
+            // reset to all players
+            game.whosTurn = game.players.map(p => p.index);
+        } else {
+            // remove player from the list
+            const index = game.whosTurn.indexOf(turn.player);
+            if (index > -1) {
+                game.whosTurn.splice(index, 1);
+            }
+        }
     } else if (turn.type != 'challenge') {
         // determine who's turn it is now
-        game.whosTurn = (game.whosTurn + 1) % game.players.length;
-        turn.whosTurn = game.whosTurn;
+        game.whosTurn = [(game.whosTurn[0] + 1) % game.players.length];
     }
+    turn.whosTurn = game.whosTurn;
 
     // store new game data
     game.save();
@@ -687,11 +702,12 @@ app.get("/games",
                      })
                      .map(function (game) {
                          return { key: game.key,
+                                  variant: game.variant,
                                   players: game.players.map(function(player) {
                                       return { name: player.name,
                                                email: player.email,
                                                key: player.key,
-                                               hasTurn: player == game.players[game.whosTurn]};
+                                               hasTurn: game.whosTurn.length && game.whosTurn.includes(player.index)};
                                   })};
                      }));
 });
@@ -700,9 +716,9 @@ app.post("/send-game-reminders", function (req, res) {
     var count = 0;
     db.all().map(function (game) {
         game = db.get(game.key);
-        if (!game.endMessage) {
+        if (!game.endMessage && game.variant != 'duplicate') {
             count = count + 1;
-            var player = game.players[game.whosTurn];
+            var player = game.players[game.whosTurn[0]];
             game.sendInvitation(player,
                                 'It is your turn in your Scrabble game with '
                                 + joinProse(game.otherPlayers(player)));
