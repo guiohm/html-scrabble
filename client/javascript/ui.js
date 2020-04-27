@@ -816,68 +816,68 @@ UI.prototype.updateRackSquare = function(square) {
         if (square.tile.isBlank()) {
             $(div).addClass('BlankLetter');
         }
-    $(div)
-        .addClass('Temp')
-        .click(
+        $(div)
+            .addClass('Temp')
+            .click(
+                function () {
+                    if (ui.currentlySelectedSquare) {
+                        if (ui.currentlySelectedSquare == square) {
+                            ui.selectSquare(null);
+                            return;
+                        }
+                    }
+                    ui.selectSquare(square);
+                }
+            );
+
+        var doneOnce = false;
+
+        $(div).draggable({
+            revert: "invalid",
+            opacity: 1,
+            helper: "clone",
+            start: function (event, jui) {
+                ui.selectSquare(null);
+                $(this).css({ opacity: 0.5 });
+                $(jui.helper)
+                    .animate({ 'font-size': '120%' }, 300)
+                    .addClass("dragBorder");
+            },
+
+            drag: function (event, jui) {
+                if (!doneOnce) {
+                    $(jui.helper).addClass("dragBorder");
+                    doneOnce = true;
+                }
+            },
+            stop: function (event, jui) {
+                $(this).css({ opacity: 1 });
+            }
+        });
+
+        a.appendChild(SPAN({ 'class': 'Letter' },
+            square.tile.letter ? square.tile.letter : ''));
+        a.appendChild(SPAN({ 'class': 'Score' },
+            square.tile.score ? square.tile.score : ''));
+    } else {
+        div.setAttribute('class', 'Empty');
+
+        $(div).click(
             function () {
                 if (ui.currentlySelectedSquare) {
-                    if (ui.currentlySelectedSquare == square) {
-                        ui.selectSquare(null);
-                    return;
-                    }
+                    ui.moveTile(ui.currentlySelectedSquare, square);
+                    ui.selectSquare(null);
                 }
-                ui.selectSquare(square);
             }
         );
 
-    var doneOnce = false;
-
-    $(div).draggable({
-        revert: "invalid",
-        opacity: 1,
-        helper: "clone",
-        start: function(event, jui) {
-        ui.selectSquare(null);
-        $(this).css({ opacity: 0.5 });
-        $(jui.helper)
-                    .animate({'font-size' : '120%'}, 300)
-                    .addClass("dragBorder");
-        },
-
-        drag: function(event, jui) {
-        if (!doneOnce) {
-            $(jui.helper).addClass("dragBorder");
-            doneOnce = true;
-        }
-        },
-        stop: function(event, jui) {
-        $(this).css({ opacity: 1 });
-        }
-    });
-
-        a.appendChild(SPAN({ 'class': 'Letter'  },
-                           square.tile.letter ? square.tile.letter : ''));
-        a.appendChild(SPAN({ 'class': 'Score' },
-                           square.tile.score ? square.tile.score : ''));
-    } else {
-    div.setAttribute('class', 'Empty');
-
-    $(div).click(
-        function () {
-        if (ui.currentlySelectedSquare) {
-            ui.moveTile(ui.currentlySelectedSquare, square);
-            ui.selectSquare(null);
-                }
-        }
-    );
-
-    $(div).droppable({
-        hoverClass: "dropActive",
-        drop: function(event, jui) {
+        $(div).droppable({
+            hoverClass: "dropActive",
+            drop: function (event, jui) {
                 ui.deleteCursor();
                 ui.moveTile(ui.idToSquare($(jui.draggable).attr("id")), square);
-        }
-    });
+            }
+        });
     }
 };
 
