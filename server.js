@@ -502,7 +502,7 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
             var winningTurn = { score: 0 };
             for (var i = turnCount - 1; i >= turnCount - playerCount; i--) {
                 //TODO handle draw
-                if (game.turns[i].score > winningTurn.score) {
+                if (game.turns[i].score >= winningTurn.score) {
                     winningTurn = game.turns[i];
                 }
             }
@@ -542,7 +542,7 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
         game.finish(game.players[game.whosTurn[0]].name + ' ended the game');
     } else if (game.isDuplicate() && game.rack.length <= 1) {
         game.finish('Not enough letter in letterbag');
-    } else if (game.letterBag.remainingTileCount() <= 1) {
+    } else if (!game.isDuplicate() && game.letterBag.remainingTileCount() <= 1) {
         game.finish('Not enough letter in letterbag');
     } else if (game.isDuplicate()) {
         // determine who's turn it is now
