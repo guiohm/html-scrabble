@@ -855,6 +855,14 @@ UI.prototype.updateRackSquare = function(square) {
             }
         });
 
+        $(div).droppable({
+            hoverClass: "dropActive",
+            drop: function (event, jui) {
+                ui.deleteCursor();
+                ui.moveTile(ui.idToSquare($(jui.draggable).attr("id")), square);
+            }
+        });
+
         a.appendChild(SPAN({ 'class': 'Letter' },
             square.tile.letter ? square.tile.letter : ''));
         a.appendChild(SPAN({ 'class': 'Score' },
@@ -1002,10 +1010,40 @@ UI.prototype.moveTile = function(fromSquare, toSquare) {
             tile.letter = ' ';
         }
     }
+    this._makeRoomToInsertTileInRack(fromSquare, toSquare);
     toSquare.placeTile(tile);
     toSquare.owner.tileCount++;
     if (!this.boardLocked()) {
         setTimeout(function () { ui.updateGameStatus() }, 100);
+    }
+};
+
+UI.prototype._makeRoomToInsertTileInRack = function(fromSquare, toSquare) {
+    if (!toSquare.tile || toSquare.owner != this.rack) {
+        return;
+    }
+    const squares = toSquare.owner.squares;
+    let xFrom = fromSquare.x;
+    if (fromSquare.owner != this.rack) {
+        // search the nearest empty slot
+        let i = toSquare.x;
+        let direction = 1;
+        while(true) {
+            if (i == squares.length - 1) {
+                direction = -1;
+                i = toSquare.x;
+            }
+            i += direction;
+            if (!squares[i].tile) {
+                xFrom = i;
+                break;
+            }
+        }
+    }
+    const direction = xFrom > toSquare.x ? -1 : 1;
+    for (let i = xFrom; i != toSquare.x; i += direction) {
+        squares[i].placeTile(squares[i + direction].tile);
+        squares[i + direction].placeTile(null);
     }
 };
 

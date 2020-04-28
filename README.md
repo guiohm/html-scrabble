@@ -6,16 +6,15 @@ This is a fork of Hans Huebner's https://github.com/hanshuebner/html-scrabble
 
 * Implemented 'Duplicate' variant (https://en.wikipedia.org/wiki/Duplicate_Scrabble)
 * Dictionary search/validation (using TRIE search)
+* Improved rack drag'n'drop. Easier rack organizaiton : A tile can be dropped on another one. The other tiles will be pushed around.
 * **UI in French only ATM**. __I quickly replaced english with french before playing with family while in confinment. This is bad, sorry. I'll fix that later__
 
 ## Future changes
 
 * Internationalization
 * Timer
-* Improve rack drag'n'drop implementation
 * Add support for touch screens
 * Improve 'Duplicate' variant support:
-    * Players can play simultaneously
     * Auto-swap rack letters according to rules (at least 2 consonants && 2 vowels
      on first 15 turns, then 1/1)
     * Arbitration when draw at end of round
