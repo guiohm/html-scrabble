@@ -6,8 +6,8 @@ class TimerComponent extends React.Component {
         this.state = {
             completed: false,
             started: false,
-            duration: 120,
-            remaining: 120,
+            duration: 180,
+            remaining: 180,
         };
 
         this.onPlus = this.onPlus.bind(this);

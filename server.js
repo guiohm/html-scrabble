@@ -500,10 +500,12 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
 
             // 1. Who wins
             var winningTurn = { score: 0 };
+            var wininglayerIndexes = []
             for (var i = turnCount - 1; i >= turnCount - playerCount; i--) {
                 //TODO handle draw
                 if (game.turns[i].score >= winningTurn.score) {
                     winningTurn = game.turns[i];
+                    wininglayerIndexes.push(winningTurn.player);
                 }
             }
 
@@ -524,10 +526,14 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
             }
 
             // 4. Update game state
+            var players = wininglayerIndexes
+                .map(i => game.players[i].name).join(', ');
+                var plural = players.length > 1;
             turn.winningTurn = {
-                message: `${game.players[winningTurn.player].name} remporte la manche`,
+                message: `${players} remporte${(plural ? 'ent' : '')} la manche`,
                 placements: winningTurn.placements,
                 score: winningTurn.score,
+                allTilesBonus: winningTurn.allTilesBonus,
             };
             turn.newRackTiles = game.rack.squares.filter(s => s.tile).map(s => s.tile);
 
@@ -575,7 +581,7 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
         game.connections.forEach(function (socket) {
             socket.emit('gameEnded', endMessage);
         });
-    } else {
+    } else if (!game.isDuplicate() || turn.winningTurn) {
         game.timerhandleAction('reset-and-start');
     }
 
@@ -675,10 +681,10 @@ Game.prototype.newConnection = function(socket, player) {
     });
 }
 
-Game.prototype.timerhandleAction = function(action) {
+Game.prototype.timerhandleAction = function(action, socket) {
     if (!action) return;
-    if (!this.game.timer) {
-        this.game.timer = {
+    if (!this.timer) {
+        this.timer = {
             state: {
                 completed: false,
                 started: false,
@@ -688,13 +694,13 @@ Game.prototype.timerhandleAction = function(action) {
             eta: null,
         }
     }
-    const {state} = this.game.timer;
+    const {state} = this.timer;
 
     // First catch up on current state
     const updateState = () => {
-        if (state.started && this.game.timer.eta) {
+        if (state.started && this.timer.eta) {
             // check if it should have completed by now
-            state.remaining = Math.ceil((this.game.timer.eta - Date.now()) / 1000);
+            state.remaining = Math.ceil((this.timer.eta - Date.now()) / 1000);
             if (state.remaining <= 0) {
                 state.completed = true;
                 state.remaining = 0;
@@ -721,11 +727,11 @@ Game.prototype.timerhandleAction = function(action) {
                     state.completed = false;
                     state.remaining = state.duration;
                 }
-                this.game.timer.eta = Date.now() + (state.remaining * 1000);
+                this.timer.eta = Date.now() + (state.remaining * 1000);
             } else {
                 // stop, ensure remaining >= 0
                 state.remaining = Math.max(0,
-                    Math.ceil((this.game.timer.eta - Date.now()) / 1000));
+                    Math.ceil((this.timer.eta - Date.now()) / 1000));
             }
             break;
         case 'changeTime':
@@ -740,16 +746,16 @@ Game.prototype.timerhandleAction = function(action) {
             }
             break;
         case 'complete':
-            console.log('Timer complete delta (ms): ', Date.now() - this.game.timer.eta);
+            console.log('Timer complete delta (ms): ', Date.now() - this.timer.eta);
             return;
         case 'status':
             // send status to requesting player only
-            this.emit('timer', {state});
+            socket.emit('timer', {state});
             return;
         default:
             break;
     }
-    this.game.notifyListeners('timer', {state});
+    this.notifyListeners('timer', {state});
 }
 
 // Authentication for game list///////////////////////////////////////////////
@@ -951,7 +957,7 @@ io.sockets.on('connection', function (socket) {
             this.game.notifyListeners('message', message);
         })
         .on('timer', function(data) {
-            this.game.timerhandleAction(data.action);
+            this.game.timerhandleAction(data.action, this);
         });
 });
 

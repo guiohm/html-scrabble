@@ -89,17 +89,19 @@ function UI(game) {
 
         function appendTurnToLog(turn, suppressScroll) {
             player = ui.players[turn.player];
-            var showWords = !ui.isDuplicate || turn.player == ui.playerNumber;
+            var hideScore = ui.isDuplicate && turn.player != ui.playerNumber;
             var div = DIV({ 'class': 'moveScore' },
                           DIV({ 'class': 'score' },
                               SPAN({ 'class': 'playerName' }, player.name),
-                              SPAN({ 'class': 'score' }, turn.score)));
+                              SPAN({ 'class': 'spoiler-replacement'}, ' à joué'),
+                              SPAN({ 'class': 'score' + (hideScore ? ' spoiler' : '')}, turn.score),
+                              ));
             switch (turn.type) {
             case 'move':
                 turn.move.words.forEach(function (word) {
                     var wordStr = word.word.replace(' ', '_');
-                    $(div).append(DIV({ 'class': 'moveDetail' },
-                                      SPAN({ 'class': 'word', 'data-word': wordStr }, showWords ? wordStr : '_'.repeat(wordStr.length)),
+                    $(div).append(DIV({ 'class': 'moveDetail' + (hideScore ? ' spoiler' : '')},
+                                      SPAN({ 'class': 'word' }, word.word),
                                       SPAN({ 'class': 'score' }, word.score)));
                 });
                 if (turn.move.allTilesBonus) {
@@ -132,11 +134,8 @@ function UI(game) {
         }
 
         function revealPlayerWords() {
-            $('span.word').each(function() {
-                const word = $(this).data('word');
-                if (word)
-                    $(this).text(word);
-            });
+            $('.spoiler-replacement').remove();
+            $('.spoiler').removeClass('spoiler');
         }
 
         function processMoveScore(turn) {
@@ -362,6 +361,9 @@ function UI(game) {
                 ui.remainingTileCounts = turn.remainingTileCounts;
                 if (turn.whosTurn.includes(ui.playerNumber)) {
                     ui.playAudio("yourturn");
+                }
+                if (turn.move.allTilesBonus || (ui.isDuplicate() && turn.winningTurn.allTilesBonus)) {
+                    ui.playAudio("applause");
                 }
                 ui.boardLocked(!turn.whosTurn.includes(ui.playerNumber));
                 ui.removeMoveEditButtons();
@@ -1204,9 +1206,6 @@ UI.prototype.commitMove = function() {
             return;
         }
         this.endMove();
-        if (move.tilesPlaced.length == 7) {
-            ui.playAudio("applause");
-        }
         for (var i = 0; i < move.tilesPlaced.length; i++) {
             var tilePlaced = move.tilesPlaced[i];
             var square = ui.board.squares[tilePlaced.x][tilePlaced.y];

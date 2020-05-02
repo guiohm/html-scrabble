@@ -71,6 +71,10 @@ div#log > div > div {
     margin-top: 0.2em;
 }
 
+div#log .spoiler {
+    display: none;
+}
+
 div#scoreboard {
     min-height: 4em;
 }
