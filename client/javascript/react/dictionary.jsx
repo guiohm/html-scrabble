@@ -4,7 +4,7 @@ function SearchResults(props) {
   if (props.search.length < 2)
     return '';
   if (!props.results.length)
-    return <p>Pas de résultat</p>;
+    return <p>{props.search} n'est pas valide</p>;
 
   const listItems = props.results.map((result) =>
     <li key={result.toString()}>
@@ -28,6 +28,7 @@ class DictionaryComponent extends React.Component {
   }
 
   handleChange(event) {
+    event.preventDefault();
     this.setState({search: event.target.value.toUpperCase()});
     if (event.target.value.length < 2) {
       return;
@@ -39,7 +40,7 @@ class DictionaryComponent extends React.Component {
 
   render() {
     return (
-      <form>
+      <form onSubmit={e => { e.preventDefault(); }}>
         <label>
           <span>Dictionnaire</span>
           <input type="text" value={this.state.search} onChange={this.handleChange} />

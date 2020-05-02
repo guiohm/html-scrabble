@@ -1,5 +1,5 @@
 
-var ui = 0;
+var ui = null;
 
 $(document).ready(function() {
     ui = new UI();

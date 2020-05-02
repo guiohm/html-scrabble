@@ -6,69 +6,84 @@ class TimerComponent extends React.Component {
         this.state = {
             completed: false,
             started: false,
-            duration: 180,
-            remaining: 180,
+            duration: 120,
+            remaining: 120,
         };
 
         this.onPlus = this.onPlus.bind(this);
         this.onMinus = this.onMinus.bind(this);
         this.update = this.update.bind(this);
         this.onReset = this.onReset.bind(this);
-        this.onClickStartPause = this.onClickStartPause.bind(this);
+        this.onStartPause = this.onStartPause.bind(this);
     }
 
     componentDidMount() {
         this.bar = document.querySelector('.timer-bar__bar');
         this.barWidth = this.bar.offsetWidth;
+        // TODO remove ui object dependency
+        setTimeout(() => {
+            this.socket = ui.socket;
+            this.socket.on('timer', (data) => {
+                // console.log('received on ' + new Date(), data);
+                if (data.state) {
+                    this.setState(data.state, this._startStopAccordingToState);
+                }
+            });
+            console.log('Timer ready')
+            this.dispatchEvent({action: 'status'});
+        }, 5000);
     }
 
-    handleOnComplete(e) {
-        console.log('complete!!', e);
+    dispatchEvent(data, noServerSend = false) {
+        window.document.dispatchEvent(
+            new CustomEvent('scrabble-timer', {detail: data}));
+        if (noServerSend) return;
+        this.socket.emit('timer', data);
     }
 
-    onClickStartPause() {
-        if (this.state.completed) {
-            this.onReset();
-        }
-        if (this.itvId) {
-            this.itvId = window.clearInterval(this.itvId);
+    _startStopAccordingToState() {
+        if (this.state.started) {
+            if (!this.itvId) {
+                this.update();
+                this.itvId = window.setInterval(this.update, 1000);
+            }
         } else {
-            this.update();
-            this.itvId = window.setInterval(this.update, 1000);
+            this.itvId = window.clearInterval(this.itvId);
         }
-        this.setState({started: !!this.reqId, completed: false});
     }
 
-    onReset() {
-        this.setState({remaining: this.state.duration})
-    }
-
-    changeTime(increment) {
-        this.setState({
-            duration: this.state.duration + increment,
-            remaining: this.state.remaining == this.state.duration ?
-                this.state.remaining + increment : this.state.remaining
-        })
+    onStartPause() {
+        this.dispatchEvent({action: 'startpause'})
     }
 
     onPlus() {
-        this.changeTime(1);
+        this.dispatchEvent({action: 'changeTime', increment: 30})
     }
 
     onMinus() {
-        this.changeTime(-1);
+        this.dispatchEvent({action: 'changeTime', increment: -30})
+    }
+
+    onReset() {
+        this.dispatchEvent({action: 'reset'})
     }
 
     update() {
         const remaining = this.state.remaining - 1;
         if (remaining <= 0) {
             this.itvId = window.clearInterval(this.itvId);
+            this.dispatchEvent({action: 'complete'});
+            console.log('Timer completed on: ' + new Date());
+            this.setState({
+                started: false,
+                completed: true,
+                remaining: 0
+            });
+        } else {
+            this.setState({
+                remaining: remaining
+            });
         }
-        this.setState({
-            completed: remaining <= 0,
-            started: remaining <= 0 ? false : this.state.started,
-            remaining: remaining,
-        });
     }
 
     formatTime(seconds) {
@@ -86,21 +101,19 @@ class TimerComponent extends React.Component {
         } else if (remaining == this.state.duration) {
             remainingText = this.formatTime(remaining);
         } else {
-            // adjustment for delay in css animation
-            if (remaining < this.state.duration)
-                remaining++;
             remainingText = this.formatTime(remaining);
         }
         durationText = this.formatTime(this.state.duration);
 
-        const position = this.state.remaining == this.state.duration ? 100 :
-            100 * this.state.remaining / this.state.duration - 1;
+        const position = remaining == this.state.duration ? 100 :
+            remaining <= 30 ? 100 * (remaining - 1) / 30 :
+            100 * remaining / this.state.duration - 1;
         if (this.bar)
             this.bar.style.transform = 'translateX(' + (position < 0 ? 0 : position) + '%)';
 
         return (
         <div>
-            <div className="timer-bar" onClick={this.update}>
+            <div className={'timer-bar' + (remaining <= 30 ? ' red' : '')} onClick={this.update}>
                 <div className="timer-bar__bar"></div>
             </div>
             <div className="timer-text-zone">
@@ -110,7 +123,7 @@ class TimerComponent extends React.Component {
                     <div style={{clear: 'both'}}></div>
                 </div>
                 <div className="timer-buttons">
-                    <button onClick={this.onClickStartPause}>Play/Pause</button>
+                    <button onClick={this.onStartPause}>Play/Pause</button>
                     <button onClick={this.onReset}>0</button>
                     <button onClick={this.onPlus}>+</button>
                     <button onClick={this.onMinus}>-</button>

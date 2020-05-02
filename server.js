@@ -575,6 +575,8 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
         game.connections.forEach(function (socket) {
             socket.emit('gameEnded', endMessage);
         });
+    } else {
+        game.timerhandleAction('reset-and-start');
     }
 
     return { newTiles: newTiles };
@@ -671,6 +673,83 @@ Game.prototype.newConnection = function(socket, player) {
             game.notifyListeners('leave', player.index);
         }
     });
+}
+
+Game.prototype.timerhandleAction = function(action) {
+    if (!action) return;
+    if (!this.game.timer) {
+        this.game.timer = {
+            state: {
+                completed: false,
+                started: false,
+                duration: 180,
+                remaining: 180,
+            },
+            eta: null,
+        }
+    }
+    const {state} = this.game.timer;
+
+    // First catch up on current state
+    const updateState = () => {
+        if (state.started && this.game.timer.eta) {
+            // check if it should have completed by now
+            state.remaining = Math.ceil((this.game.timer.eta - Date.now()) / 1000);
+            if (state.remaining <= 0) {
+                state.completed = true;
+                state.remaining = 0;
+                state.started = false;
+            }
+        }
+    };
+    updateState();
+
+    if (action == 'reset-and-start') {
+        state.completed = false;
+        state.started = false;
+        state.remaining = state.duration;
+        action = 'startpause';
+    }
+
+    switch (action) {
+        case 'startpause':
+            // Now toggle start/pause
+            state.started = !state.started;
+            if (state.started) {
+                // start
+                if (state.completed) {
+                    state.completed = false;
+                    state.remaining = state.duration;
+                }
+                this.game.timer.eta = Date.now() + (state.remaining * 1000);
+            } else {
+                // stop, ensure remaining >= 0
+                state.remaining = Math.max(0,
+                    Math.ceil((this.game.timer.eta - Date.now()) / 1000));
+            }
+            break;
+        case 'changeTime':
+            if (state.remaining == state.duration) {
+                state.remaining += data.increment;
+            }
+            state.duration += data.increment;
+            break;
+        case 'reset':
+            if (!state.started) {
+                state.remaining = state.duration;
+            }
+            break;
+        case 'complete':
+            console.log('Timer complete delta (ms): ', Date.now() - this.game.timer.eta);
+            return;
+        case 'status':
+            // send status to requesting player only
+            this.emit('timer', {state});
+            return;
+        default:
+            break;
+    }
+    this.game.notifyListeners('timer', {state});
 }
 
 // Authentication for game list///////////////////////////////////////////////
@@ -870,6 +949,9 @@ io.sockets.on('connection', function (socket) {
         })
         .on('message', function(message) {
             this.game.notifyListeners('message', message);
+        })
+        .on('timer', function(data) {
+            this.game.timerhandleAction(data.action);
         });
 });
 

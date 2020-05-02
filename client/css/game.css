@@ -599,7 +599,7 @@ div#anagrams th
 
 div#timer .timer-bar {
     cursor: pointer;
-    margin-top: -22px;
+    margin: -15px 0 -8px;
     user-select: none;
     background-color: gold;
     border-radius: 4px;
@@ -611,8 +611,14 @@ div#timer .timer-bar {
     width: 39em;
 }
 
+div#timer .timer-bar.red {
+    background-color: orangered;
+    height: 8px;
+    margin-bottom: -13px;
+}
+
 div#timer .timer-bar__bar {
-    background-color: #000;
+    background-color: rgb(51, 30, 16);
     box-shadow: inset 0 0.5em 0.5em rgba(0, 0, 0, 0.05);
     bottom: 0;
     left: 0;

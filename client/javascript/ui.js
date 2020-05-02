@@ -560,6 +560,15 @@ function UI(game) {
                 break;
             }
         });
+
+    // event trigered by timer.jsx
+    window.document.addEventListener('scrabble-timer', (e) => {
+        if (e.detail.action == 'complete') {
+            console.log('timer complete!!', e.detail);
+            //TODO Pass turn of
+        }
+    });
+
 }
 
 UI.prototype.displayRemainingTileCounts = function() {
