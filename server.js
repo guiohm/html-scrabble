@@ -582,7 +582,7 @@ Game.prototype.finishTurn = function(player, newTiles, turn) {
             socket.emit('gameEnded', endMessage);
         });
     } else if (!game.isDuplicate() || turn.winningTurn) {
-        game.timerhandleAction('reset-and-start');
+        game.timerhandleAction({ action: 'reset-and-start'});
     }
 
     return { newTiles: newTiles };
@@ -681,8 +681,8 @@ Game.prototype.newConnection = function(socket, player) {
     });
 }
 
-Game.prototype.timerhandleAction = function(action, socket) {
-    if (!action) return;
+Game.prototype.timerhandleAction = function(data, socket) {
+    if (!data.action) return;
     if (!this.timer) {
         this.timer = {
             state: {
@@ -710,14 +710,14 @@ Game.prototype.timerhandleAction = function(action, socket) {
     };
     updateState();
 
-    if (action == 'reset-and-start') {
+    if (data.action == 'reset-and-start') {
         state.completed = false;
         state.started = false;
         state.remaining = state.duration;
         action = 'startpause';
     }
 
-    switch (action) {
+    switch (data.action) {
         case 'startpause':
             // Now toggle start/pause
             state.started = !state.started;
@@ -735,10 +735,13 @@ Game.prototype.timerhandleAction = function(action, socket) {
             }
             break;
         case 'changeTime':
-            if (state.remaining == state.duration) {
-                state.remaining += data.increment;
-            }
+            var updateRemaining = state.remaining == state.duration;
             state.duration += data.increment;
+            state.duration = Math.min(600, state.duration); // max 10 min
+            state.duration = Math.max(30, state.duration); // min 30 s
+            if (updateRemaining) {
+                state.remaining = state.duration;
+            }
             break;
         case 'reset':
             if (!state.started) {
@@ -957,7 +960,7 @@ io.sockets.on('connection', function (socket) {
             this.game.notifyListeners('message', message);
         })
         .on('timer', function(data) {
-            this.game.timerhandleAction(data.action, this);
+            this.game.timerhandleAction(data, this);
         });
 });
 

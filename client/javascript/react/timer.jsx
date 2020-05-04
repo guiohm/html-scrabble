@@ -8,6 +8,7 @@ class TimerComponent extends React.Component {
             started: false,
             duration: 180,
             remaining: 180,
+            loading: true,
         };
 
         this.onPlus = this.onPlus.bind(this);
@@ -20,18 +21,23 @@ class TimerComponent extends React.Component {
     componentDidMount() {
         this.bar = document.querySelector('.timer-bar__bar');
         this.barWidth = this.bar.offsetWidth;
+        setTimeout(() => this._initSocket(), 500);
+    }
+
+    _initSocket() {
         // TODO remove ui object dependency
-        setTimeout(() => {
-            this.socket = ui.socket;
-            this.socket.on('timer', (data) => {
-                // console.log('received on ' + new Date(), data);
-                if (data.state) {
-                    this.setState(data.state, this._startStopAccordingToState);
-                }
-            });
-            console.log('Timer ready')
-            this.dispatchEvent({action: 'status'});
-        }, 5000);
+        if (!ui || !ui.socket) {
+            setTimeout(this._initSocket, 500);
+        }
+        this.socket = ui.socket;
+        this.socket.on('timer', (data) => {
+            // console.log('received on ' + new Date(), data);
+            if (data.state) {
+                data.state.loading = false;
+                this.setState(data.state, this._startStopAccordingToState);
+            }
+        });
+        this.dispatchEvent({action: 'status'});
     }
 
     dispatchEvent(data, noServerSend = false) {
@@ -104,6 +110,9 @@ class TimerComponent extends React.Component {
             remainingText = this.formatTime(remaining);
         }
         durationText = this.formatTime(this.state.duration);
+        if(this.state.loading) {
+            remainingText = durationText = '--:--';
+        }
 
         const position = remaining == this.state.duration ? 100 :
             remaining <= 30 ? 100 * (remaining - 1) / 30 :
