@@ -2,6 +2,8 @@ config.json
 npm-debug.log
 node_modules
 client/javascript/react-output
+client/dist
+client/locales/en/translation.missing.json
 *.db
 *.db.old
 .idea

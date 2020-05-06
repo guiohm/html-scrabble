@@ -362,7 +362,8 @@ function UI(game) {
                 if (turn.whosTurn.includes(ui.playerNumber)) {
                     ui.playAudio("yourturn");
                 }
-                if (turn.move.allTilesBonus || (ui.isDuplicate() && turn.winningTurn.allTilesBonus)) {
+                if (turn.move && turn.move.allTilesBonus ||
+                        (ui.isDuplicate() && turn.winningTurn && turn.winningTurn.allTilesBonus)) {
                     ui.playAudio("applause");
                 }
                 ui.boardLocked(!turn.whosTurn.includes(ui.playerNumber));

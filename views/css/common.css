@@ -21,3 +21,14 @@ body
     user-select: none;
 }
 
+div.language {
+    position: absolute;
+    right: 12px;
+    color: white;
+    opacity: 0.6;
+}
+
+div.language > a {
+    color: white;
+}
+

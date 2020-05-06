@@ -1,0 +1,37 @@
+{
+    "create_new_game": "Créer une Nouvelle Partie",
+    "choose_game_and_player": "Choisir une partie et un joueur",
+    "title": {
+        "choose_game_and_player": "Liste des parties en cours",
+        "create_new_game": "$t(create_new_game)"
+    },
+    "create":{
+        "instructions": "Merci de saisir les noms et adresses emails des joueurs. Chaque joueur recevra une invitation par email avec un lien personnel vers le jeu.",
+        "language": "Langue"
+    },
+    "player_number": "Joueur {{number}}",
+    "name": "Nom",
+    "email": "Email",
+    "languages": {
+      "German": "German",
+      "Czech": "Czech",
+      "English": "English",
+      "Estonian": "Estonian",
+      "French": "French",
+      "Hungarian": "Hungarian",
+      "Test": "Test",
+      "Nederlands": "Nederlands"
+    },
+    "timer": "Chronomètre",
+    "timer_mode": {
+        "autostart": "Autostart",
+        "manual": "Manuel",
+        "hidden": "Caché"
+    },
+    "variant": "Variante",
+    "variants": {
+        "duplicate_explanation": "En \"Duplicate\" tous les joueurs ont les mêmes lettres et jouent simultanément. <br> Le mot qui fait le plus de points est retenu à la fin du tour. <br>(chrono conseillé !)",
+        "classic": "Classique",
+        "duplicate": "Duplicate"
+    }
+}

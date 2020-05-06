@@ -1,0 +1,75 @@
+doctype html
+html
+  head
+    style
+      include css/common.css
+      include css/page.css
+    script(src='/dist/i18n.js')
+    script(src='/javascript/MochiKit/MochiKit.js')
+    script(src='/javascript/underscore.js')
+    script(src='/javascript/jquery-1.7.2.js')
+    script(src='/javascript/jquery-ui-1.8.21.custom.min.js')
+    script(src='/javascript/make-game.js')
+    title= t('title.create_new_game')
+  body
+    div(class='language')
+      a(href="?lng=en") en
+      | &nbsp; | &nbsp;
+      a(href="?lng=fr") fr
+
+    form#create-game(action='game' method='POST')
+      fieldset
+        h1=t('create_new_game')
+        p=t('create.instructions')
+        fieldset
+          legend=t('create.language')
+          select(name='language', selected = 4)
+            option(value='German')=t('languages.German')
+            option(value='Czech')=t('languages.Czech')
+            option(value='English')=t('languages.English')
+            option(value='Estonian')=t('languages.Estonian')
+            option(value='French')=t('languages.French')
+            option(value='Hungarian')=t('languages.Hungarian')
+            option(value='Test')=t('languages.Test')
+            option(value='Nederlands')=t('languages.Nederlands')
+        fieldset
+          legend=t('player_number', {number: 1})
+          label(for='name1')=t('name')
+          input.name(name='name1')
+          br
+          label(for='email1')=t('email')
+          input(name='email1')
+        fieldset
+          legend=t('player_number', {number: 2})
+          label(for='name2')=t('name')
+          input.name(name='name2')
+          br
+          label(for='email2')=t('email')
+          input(name='email2')
+        fieldset
+          legend=t('player_number', {number: 3})
+          label(for='name3')=t('name')
+          input.name(name='name3')
+          br
+          label(for='email3')=t('email')
+          input(name='email3')
+        fieldset
+          legend=t('player_number', {number: 4})
+          label(for='name4')=t('name')
+          input.name(name='name4')
+          br
+          label(for='email4')=t('email')
+          input(name='email4')
+        fieldset
+          legend=t('variant')
+          select(name='variant')
+            option(value='classic')=t('variants.classic')
+            option(value='duplicate')=t('variants.duplicate')
+          p!=t('variants.duplicate_explanation',{interpolation: { escapeValue: false }})
+        fieldset
+          legend=t('timer')
+          select(name='timer')
+            option(value='autostart')=t('timer_mode.autostart')
+            option(value='manual')=t('timer_mode.manual')
+            option(value='hidden')=t('timer_mode.hidden')
+        button(name='create', type='submit')=t('create_new_game')

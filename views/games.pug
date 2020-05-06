@@ -1,0 +1,23 @@
+doctype html
+html
+  head
+    style
+      include css/common.css
+      include css/page.css
+    script(src='/dist/i18n.js')
+    script(src='/javascript/MochiKit/MochiKit.js')
+    script(src='/javascript/underscore.js')
+    script(src='/javascript/jquery-1.7.2.js')
+    script(src='/javascript/jquery-ui-1.8.21.custom.min.js')
+    script(src='/javascript/games.js')
+    title= t('title.choose_game_and_player')
+  body
+    div(class='language')
+      a(href="?lng=en") en
+      | &nbsp; | &nbsp;
+      a(href="?lng=fr") fr
+    fieldset
+      legend= t('choose_game_and_player')
+      table
+      p
+        button(class='create_new_game')= t('create_new_game')

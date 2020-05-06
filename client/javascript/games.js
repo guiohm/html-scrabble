@@ -1,12 +1,20 @@
 $(document).ready(function() {
     var table = $("table");
-    table.append(addCreateGameLink());
     table.append(populateGamesList());
+
+    $('button.create_new_game').on('click', () => {
+        window.location.href = 'make-game'
+    })
+
+    i18next.on('onInitialized', function() {
+        // do translation stuff
+        // i18next.t('translate_me');
+    });
 });
 
 function populateGamesList() {
     var gameNumber = 1;
-    $.getJSON('/games', function(data) {
+    $.getJSON('/games.json', function(data) {
         $('table').append(data.map(function(game) {
             return TR(null,
                 TD(null, gameNumber++),
@@ -17,10 +25,4 @@ function populateGamesList() {
                 }))
         }));
     });
-}
-
-function addCreateGameLink() {
-    return TD(null,
-        A({ href: "/make-game.html" },
-            "Create new game"));
 }

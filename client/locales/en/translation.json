@@ -1,0 +1,37 @@
+{
+    "create_new_game": "Create New Game",
+    "choose_game_and_player": "Choose a game and a player",
+    "title": {
+        "choose_game_and_player": "Choose Game & Player",
+        "create_new_game": "$t(create_new_game)"
+    },
+    "create":{
+        "instructions": "Please enter the names and email addresses for the players. All players will receive an invitation email with a personal link to the game.",
+        "language": "Language"
+    },
+    "player_number": "Player {{number}}",
+    "name": "Name",
+    "email": "Email",
+    "languages": {
+      "German": "German",
+      "Czech": "Czech",
+      "English": "English",
+      "Estonian": "Estonian",
+      "French": "French",
+      "Hungarian": "Hungarian",
+      "Test": "Test",
+      "Nederlands": "Nederlands"
+    },
+    "timer": "timer",
+    "timer_mode": {
+        "autostart": "Autostart",
+        "manual": "Manual",
+        "hidden": "Hidden"
+    },
+    "variant": "Variant",
+    "variants": {
+        "duplicate_explanation": "Duplicate mode is when all players have the same letters in their rack and they play simultaneously.<br>The word ranked highest is kept at the end of the turn. <br>(timer advised!)",
+        "classic": "Classic",
+        "duplicate": "Duplicate"
+    }
+}

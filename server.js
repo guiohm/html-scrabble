@@ -15,6 +15,9 @@ var errorhandler = require('errorhandler');
 var basicAuth = require('basic-auth-connect');
 var crypto = require('crypto');
 var negotiate = require('express-negotiate');
+var i18next = require('i18next')
+var i18nBackend = require('i18next-fs-backend')
+var i18nMiddleware = require('i18next-http-middleware')
 var argv = require('optimist')
     .options('d', {
         alias: 'database',
@@ -75,6 +78,27 @@ console.log('config', config);
 
 const dictSvc = new DictionaryService();
 
+i18next
+  .use(i18nBackend)
+  .use(i18nMiddleware.LanguageDetector).init({
+    debug: true,
+    backend: {
+        // eslint-disable-next-line no-path-concat
+        loadPath: 'client/locales/{{lng}}/{{ns}}.json',
+        // eslint-disable-next-line no-path-concat
+        addPath: 'client/locales/{{lng}}/{{ns}}.missing.json'
+    },
+    detection: {
+      order: ['querystring', 'cookie'],
+      caches: ['cookie']
+    },
+    fallbackLng: 'en',
+    preload: ['en', 'fr'],
+    saveMissing: true
+
+    // otherOptions see https://www.i18next.com/overview/configuration-options
+  })
+
 // //////////////////////////////////////////////////////////////////////
 
 var smtp = nodemailer.createTransport('SMTP', config.mailTransportConfig);
@@ -84,6 +108,8 @@ var server = app.listen(config.port)
 var io = io.listen(server);
 var db = new DB.DB(argv.database);
 
+app.set('view engine', 'pug');
+
 app.use(methodOverride());
 app.use(bodyParser());
 app.use(cookieParser());
@@ -92,9 +118,32 @@ app.use(errorhandler({
     dumpExceptions: true,
     showStack: true
 }));
+app.use(
+    i18nMiddleware.handle(i18next, {
+        ignoreRoutes: function(req, res, options, i18next) { // or ['/foo']
+            // reversed to a whitelist
+            return req.path in ['/games', '/make-game'];
+         }
+    })
+);
+
+// missing keys make sure the body is parsed (i.e. with [body-parser](https://github.com/expressjs/body-parser#bodyparserjsonoptions))
+app.post('/locales/add/:lng/:ns', i18nMiddleware.missingKeyHandler(i18next))
 
 app.get("/", function(req, res) {
-  res.redirect("/games.html");
+  res.redirect("/games");
+});
+
+app.get("/games", function(req, res) {
+  res.render("games");
+});
+
+app.get("/game", function(req, res) {
+    res.redirect("/make-game");
+});
+
+app.get("/make-game", function(req, res) {
+    res.render("make-game");
 });
 
 db.on('load', function() {
@@ -780,7 +829,7 @@ app.get("/dictionary/:language", function(req, res) {
     })
 });
 
-app.get("/games",
+app.get("/games.json",
         config.gameListLogin ? gameListAuth : function (req, res, next) { next(); },
         function(req, res) {
             res.send(db
@@ -813,10 +862,6 @@ app.post("/send-game-reminders", function (req, res) {
         }
     });
     res.send("Sent " + count + " reminder emails");
-});
-
-app.get("/game", function(req, res) {
-    res.sendfile(__dirname + '/client/make-game.html');
 });
 
 app.post("/game", function(req, res) {
@@ -892,7 +937,7 @@ app.get("/game/:gameKey", gameHandler(function (game, req, res, next) {
             res.send(icebox.freeze(response));
         },
         'html': function () {
-            res.sendfile(__dirname + '/client/game.html');
+            res.render('game');
         }
     });
 }));
